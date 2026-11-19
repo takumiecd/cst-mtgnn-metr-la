@@ -1,0 +1,58 @@
+# METR-LA向け CST MTGNN
+
+[English](README.md) | 日本語
+
+METR-LAの207センサーで、先1時間の交通速度を予測するモデルです。
+[MTGNN](https://arxiv.org/abs/2005.11650)のセンサー間結合の学習部分を、1つの
+`CSTLinear`からスコアを作る方式と比較しました。時間方向の畳み込み、グラフ伝播、
+予測ヘッドは元のアーキテクチャを使います。
+
+## 公開済みの重みで予測
+
+Python 3.11以降を使います。CLIは[Hugging Face](https://huggingface.co/takumiecd/cst-mtgnn-metr-la)
+からモデル構成とSafetensorsを取得し、`torchcst.hub.from_pretrained()`で指定デバイスに
+配置します。
+
+```bash
+git clone https://github.com/takumiecd/cst-mtgnn-metr-la.git
+cd cst-mtgnn-metr-la
+python -m pip install -r requirements.txt
+mkdir -p data
+curl -fL 'https://zenodo.org/records/5146275/files/METR-LA.csv?download=1' -o data/METR-LA.csv
+python infer.py data/METR-LA.csv --test-index 0 --sensor 773869 --variant cst
+```
+
+テスト分割の先頭の入力窓に対して、5分刻みで12点の予測値と実測値が返ります。同じ入力で
+元モデルを動かすには `--variant baseline`、CUDA対応PyTorchでGPUを使うには
+`--device cuda` を指定します。独自のCSVを使う場合は、先頭を時刻列として、5分刻みで
+METR-LAの207センサーIDを全列に入れ、`--test-index` を省きます。センサー列の並び順は
+自由で、最後の12行から先1時間を予測します。
+
+## 学習と評価
+
+ベースラインは`upstream/` の
+[MITライセンスの公式MTGNNソース](https://github.com/nnzhan/MTGNN/tree/f811746fa7022ebf336f9ecd2434af5f365ecbf6)
+を使います。CST版は[DCRNNのセンサー座標](https://github.com/liyaguang/DCRNN/blob/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations.csv)
+から固定Chartを作ります。512 Atomの `CSTLinear` の因子から207×207スコア行列を作ります。
+両版とも同じ有向スコア変換、top-20のマスク、自己ループと正規化を使います。学習中は
+順位付けにノイズを加え、評価時は決定的なtop-kにします。
+
+RTX 4090を1枚使い、seed 17、バッチ64、100エポックで全12ホライズンをランダム初期化から
+学習しました。共通パラメータには初期学習率0.001のAdamWとコサイン減衰を使い、CSTの
+Atom群の初期学習率は0.0048です。ゼロ速度は欠損として学習・評価から除外します。
+時刻列を70%と80%の地点で分け、予測対象が1つの分割内に収まる窓を使用します。
+正規化の統計値は学習入力から求め、全12ホライズン平均の検証MAEが最小のチェックポイントを
+テスト評価します。
+
+```bash
+curl -fL 'https://raw.githubusercontent.com/liyaguang/DCRNN/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations.csv' -o data/locations.csv
+for variant in baseline cst; do
+  OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --variant "$variant" \
+    --data data/METR-LA.csv --locations data/locations.csv --epochs 100 \
+    --batch-size 64 --atoms 512 --seed 17 --output "output/paired/$variant"
+done
+python export.py --run output/paired --output output/weights
+```
+
+新規コードと配布重みは[Apache-2.0](LICENSE)、同梱したMTGNNソースは
+[MITライセンス](upstream/LICENSE)です。

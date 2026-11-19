@@ -1,0 +1,8 @@
+CST MTGNN for METR-LA
+Copyright 2026 takumiecd
+
+upstream/layer.py and upstream/net.py incorporate MIT-licensed MTGNN source
+(Copyright 2020 Zonghan Wu) from the following revision.
+https://github.com/nnzhan/MTGNN/tree/f811746fa7022ebf336f9ecd2434af5f365ecbf6
+The license is reproduced in upstream/LICENSE. The local changes make the
+node index device-portable and share the top-k rule across graph variants.
