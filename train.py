@@ -1,4 +1,4 @@
-"""Train and evaluate the two MTGNN graph parameterizations."""
+"""Train and evaluate the MTGNN graph variants."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def step(model, optimizer, inputs, targets, config):
 
 def make_optimizer(model, args):
     options = {"lr": 0.001, "weight_decay": 0.0001, "foreach": True}
-    if args.variant == "baseline":
+    if args.variant != "cst":
         return torch.optim.AdamW(model.parameters(), **options)
     atoms = model.gc.linear.atoms.p
     groups = [
@@ -88,7 +88,9 @@ def measure(model, speeds, clock, origins, config, batch_size):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--variant", choices=("baseline", "cst"), required=True)
+    parser.add_argument(
+        "--variant", choices=("baseline", "baseline_coords", "cst"), required=True
+    )
     parser.add_argument("--data", required=True, type=Path)
     parser.add_argument("--locations", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -206,6 +208,8 @@ def main():
             flush=True,
         )
     result["elapsed_s"] = perf_counter() - started
+    result["peak_allocated_bytes"] = torch.cuda.max_memory_allocated()
+    result["peak_reserved_bytes"] = torch.cuda.max_memory_reserved()
     (args.output / "metrics.json").write_text(json.dumps(result, indent=2) + "\n")
 
 

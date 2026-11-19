@@ -7,11 +7,46 @@ METR-LAの207センサーで、先1時間の交通速度を予測するモデル
 `CSTLinear`からスコアを作る方式と比較しました。時間方向の畳み込み、グラフ伝播、
 予測ヘッドは元のアーキテクチャを使います。
 
+## センサー座標を揃えた3シードの結果
+
+**両モデルに同じセンサー座標を与えても、全3シードでCST版のテスト誤差が小さくなりました。**
+3シードの平均では、**全12予測時点の誤差が5.5%減り、60分先では7.6%減りました。**
+
+| 予測時点 | 座標付きMTGNN | CST版 | MAEの減少 | CST版の勝ち数 |
+| --- | ---: | ---: | ---: | ---: |
+| 15分先 | 2.919 | 2.803 | 4.0% | 3/3 |
+| 30分先 | 3.347 | 3.180 | 5.0% | 3/3 |
+| 60分先 | 3.861 | 3.568 | 7.6% | 3/3 |
+| 全12時点 | 3.306 | 3.125 | 5.5% | 3/3 |
+
+単位はmphで、テスト平均絶対誤差（MAE）が小さいほど精度が高いことを示します。
+全12時点で集計した各シードのMAEは次のとおりです。
+
+| シード | 座標付きMTGNN | CST版 | MAEの減少 |
+| ---: | ---: | ---: | ---: |
+| 17 | 3.332 | 3.130 | 6.1% |
+| 29 | 3.281 | 3.121 | 4.9% |
+| 43 | 3.305 | 3.123 | 5.5% |
+
+元のMTGNNには学習可能なセンサーID埋め込みにスケール調整した座標を連結し、CST版では
+同じ位置情報を固定Chartに使いました。各ペアでグラフ生成以外の初期重み、バッチ順、
+データ分割を揃えています。RTX 4090でバッチサイズ64、各100エポックを一から学習し、
+検証MAEでチェックポイントを選びました。CST版は512 Atom、Atomの初期学習率0.0048です。
+グラフ生成のパラメータは20,000から3,072に減り、1回あたりの平均学習時間は
+10.2分から11.2分になりました。
+
+![座標を揃えたMTGNNとCST版のエポック別検証MAE。3シードの平均と範囲](results/coordinate-controlled/validation-curves.png)
+
+線は3シードの平均検証MAE、帯は各エポックでの最小値から最大値までの範囲です。
+
+[シード別の結果（CSV）](results/coordinate-controlled/test-by-seed.csv) · [集計結果（JSON）](results/coordinate-controlled/summary.json)
+
 ## 公開済みの重みで予測
 
 Python 3.11以降を使います。CLIは[Hugging Face](https://huggingface.co/takumiecd/cst-mtgnn-metr-la)
 からモデル構成とSafetensorsを取得し、`torchcst.hub.from_pretrained()`で指定デバイスに
 配置します。
+ダウンロードできる2つのチェックポイントは、後述する初回のシード17の比較で得たものです。
 
 ```bash
 git clone https://github.com/takumiecd/cst-mtgnn-metr-la.git
@@ -28,7 +63,7 @@ python infer.py data/METR-LA.csv --test-index 0 --sensor 773869 --variant cst
 METR-LAの207センサーIDを全列に入れ、`--test-index` を省きます。センサー列の並び順は
 自由で、最後の12行から先1時間を予測します。
 
-## 結果
+## 公開チェックポイントの初回比較
 
 欠損を除外したテストMAE。単位はmphで、小さいほど精度が高い。
 
@@ -55,7 +90,7 @@ CST版17.15 msだった。学習比較は1 seedで、CST側のChartには地理�
 両版とも同じ有向スコア変換、top-20のマスク、自己ループと正規化を使います。学習中は
 順位付けにノイズを加え、評価時は決定的なtop-kにします。
 
-RTX 4090を1枚使い、seed 17、バッチ64、100エポックで全12ホライズンをランダム初期化から
+RTX 4090を1枚使い、バッチ64、100エポックで全12ホライズンをランダム初期化から
 学習しました。共通パラメータには初期学習率0.001のAdamWとコサイン減衰を使い、CSTの
 Atom群の初期学習率は0.0048です。ゼロ速度は欠損として学習・評価から除外します。
 時刻列を70%と80%の地点で分け、予測対象が1つの分割内に収まる窓を使用します。
@@ -64,6 +99,19 @@ Atom群の初期学習率は0.0048です。ゼロ速度は欠損として学習�
 
 ```bash
 curl -fL 'https://raw.githubusercontent.com/liyaguang/DCRNN/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations.csv' -o data/locations.csv
+for seed in 17 29 43; do
+  for variant in baseline_coords cst; do
+    OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --variant "$variant" \
+      --data data/METR-LA.csv --locations data/locations.csv --epochs 100 \
+      --batch-size 64 --atoms 512 --seed "$seed" \
+      --output "output/coordinate-controlled/seed-$seed-$variant"
+  done
+done
+```
+
+初回の比較を再現し、公開済みの2種類の重みをエクスポートするには、以下を実行します。
+
+```bash
 for variant in baseline cst; do
   OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --variant "$variant" \
     --data data/METR-LA.csv --locations data/locations.csv --epochs 100 \

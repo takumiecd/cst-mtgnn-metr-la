@@ -1,0 +1,79 @@
+{
+  "seeds": [
+    17,
+    29,
+    43
+  ],
+  "epochs": 100,
+  "batch_size": 64,
+  "dataset_sha256": "5fa498de0c90f5ff9b67e7cf9654bec031a803b320a8eb13d48021b9983bec82",
+  "device": "NVIDIA GeForce RTX 4090",
+  "torch": "2.6.0+cu126",
+  "torchcst_commit": "1750c5ea6cbefe3d4a7d8f6ba02fd9272df3cf98",
+  "variants": {
+    "baseline_coords": {
+      "graph_parameters": 20000,
+      "model_parameters": 405612,
+      "average_training_seconds": 613.1488506216665
+    },
+    "cst": {
+      "graph_parameters": 3072,
+      "model_parameters": 388684,
+      "average_training_seconds": 673.0857491453316
+    }
+  },
+  "test_mae_mph": {
+    "15 min": {
+      "baseline_mean": 2.918921234852849,
+      "baseline_sample_std": 0.010408591548552957,
+      "cst_mean": 2.8029355855664266,
+      "cst_sample_std": 0.0012258115074331383,
+      "relative_improvement": 0.03973579276532607,
+      "cst_wins": 3,
+      "paired_improvement_mph": {
+        "17": 0.12581699155344372,
+        "29": 0.10439482923777232,
+        "43": 0.1177451270680514
+      }
+    },
+    "30 min": {
+      "baseline_mean": 3.346954878708799,
+      "baseline_sample_std": 0.026883780998032215,
+      "cst_mean": 3.1801344156673856,
+      "cst_sample_std": 0.004091940971703949,
+      "relative_improvement": 0.04984245951525046,
+      "cst_wins": 3,
+      "paired_improvement_mph": {
+        "17": 0.19297880267705736,
+        "29": 0.14987996166232698,
+        "43": 0.15760262478485565
+      }
+    },
+    "60 min": {
+      "baseline_mean": 3.8606867601384582,
+      "baseline_sample_std": 0.055782706884722394,
+      "cst_mean": 3.5682121218662437,
+      "cst_sample_std": 0.007192710230867958,
+      "relative_improvement": 0.07575715318114166,
+      "cst_wins": 3,
+      "paired_improvement_mph": {
+        "17": 0.3301098952804562,
+        "29": 0.23715519812952524,
+        "43": 0.3101588214066626
+      }
+    },
+    "All horizons": {
+      "baseline_mean": 3.30601802314189,
+      "baseline_sample_std": 0.02564195772535811,
+      "cst_mean": 3.124654425840124,
+      "cst_sample_std": 0.004513151934443902,
+      "relative_improvement": 0.05485862328403351,
+      "cst_wins": 3,
+      "paired_improvement_mph": {
+        "17": 0.20220673099618125,
+        "29": 0.159609648837014,
+        "43": 0.18227441207210315
+      }
+    }
+  }
+}
