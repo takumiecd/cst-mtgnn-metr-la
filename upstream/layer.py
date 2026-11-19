@@ -157,32 +157,35 @@ def retain_topk(adjacency, k, training):
 
 
 class graph_constructor(nn.Module):
-    def __init__(self, nnodes, k, dim, device, alpha=3, static_feat=None):
+    def __init__(self, nnodes, k, dim, device, alpha=3, static_feat=None, append_static=False):
         super(graph_constructor, self).__init__()
         self.nnodes = nnodes
-        if static_feat is not None:
-            xd = static_feat.shape[1]
-            self.lin1 = nn.Linear(xd, dim)
-            self.lin2 = nn.Linear(xd, dim)
-        else:
+        self.use_embeddings = static_feat is None or append_static
+        features = 0 if static_feat is None else static_feat.shape[1]
+        if self.use_embeddings:
             self.emb1 = nn.Embedding(nnodes, dim)
             self.emb2 = nn.Embedding(nnodes, dim)
-            self.lin1 = nn.Linear(dim,dim)
-            self.lin2 = nn.Linear(dim,dim)
+            features += dim
+        self.lin1 = nn.Linear(features, dim)
+        self.lin2 = nn.Linear(features, dim)
 
         self.device = device
         self.k = k
         self.dim = dim
         self.alpha = alpha
-        self.static_feat = static_feat
+        self.register_buffer("static_feat", static_feat, persistent=False)
 
     def forward(self, idx):
         return retain_topk(self.fullA(idx), self.k, self.training)
 
     def fullA(self, idx):
-        if self.static_feat is None:
+        if self.use_embeddings:
             nodevec1 = self.emb1(idx)
             nodevec2 = self.emb2(idx)
+            if self.static_feat is not None:
+                features = self.static_feat[idx]
+                nodevec1 = torch.cat((nodevec1, features), dim=-1)
+                nodevec2 = torch.cat((nodevec2, features), dim=-1)
         else:
             nodevec1 = self.static_feat[idx,:]
             nodevec2 = nodevec1

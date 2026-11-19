@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 from torchcst import BandwidthBounds, CSTLinear, TriweightSpec, chart_presets, kernels
-from upstream.layer import retain_topk
+from upstream.layer import graph_constructor, retain_topk
 from upstream.net import gtnet
 
 NODES = 207
@@ -52,6 +52,14 @@ def build_model(variant: str, config: dict) -> nn.Module:
     )
     if variant == "cst":
         model.gc = CSTGraph(config["coordinates_km"], config["atoms"])
+    elif variant == "baseline_coords":
+        coordinates = torch.tensor(config["coordinates_km"], dtype=torch.float32)
+        # Match the scale of the original unit-variance node embeddings.
+        coordinates = coordinates / coordinates.square().mean().sqrt().clamp_min(1e-6)
+        model.gc = graph_constructor(
+            NODES, TOP_K, model.gc.dim, "cpu",
+            alpha=ALPHA, static_feat=coordinates, append_static=True,
+        )
     return model
 
 
