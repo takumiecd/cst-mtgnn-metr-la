@@ -1,0 +1,97 @@
+{
+  "dataset": "METR-LA",
+  "split_windows": [
+    23967,
+    3417,
+    6843
+  ],
+  "epochs": 100,
+  "batch_size": 64,
+  "training_seed": 17,
+  "results": {
+    "baseline": {
+      "best_epoch": 13,
+      "graph_parameters": 19840,
+      "all_parameters": 405452,
+      "elapsed_s": 612.5345244060009,
+      "test": {
+        "mae_all": 3.3551113953308067,
+        "horizons": [
+          {
+            "minutes": 15,
+            "mae_mph": 2.937586098334368,
+            "rmse_mph": 5.777158546322761,
+            "mape": 0.07836214417000632
+          },
+          {
+            "minutes": 30,
+            "mae_mph": 3.400642392886854,
+            "rmse_mph": 7.013290151859646,
+            "mape": 0.09550880739987234
+          },
+          {
+            "minutes": 60,
+            "mae_mph": 3.959859570479565,
+            "rmse_mph": 8.276586109488896,
+            "mape": 0.11708496431972067
+          }
+        ]
+      },
+      "validation_mae_mph": 3.0939458315152524,
+      "pilot": {
+        "updates": 60,
+        "median_step_ms": 16.07695599886938,
+        "peak_allocated_bytes": 683277824,
+        "peak_reserved_bytes": 964689920,
+        "last_loss_mph": 3.6809422969818115
+      },
+      "graph": {
+        "edges": 4140,
+        "isolated_incoming_rows": 0,
+        "median_edge_distance_km": 10.15953073652623
+      }
+    },
+    "cst": {
+      "best_epoch": 56,
+      "graph_parameters": 3072,
+      "all_parameters": 388684,
+      "elapsed_s": 674.6559280449983,
+      "test": {
+        "mae_all": 3.131726042453278,
+        "horizons": [
+          {
+            "minutes": 15,
+            "mae_mph": 2.8090662947950444,
+            "rmse_mph": 5.567084835224779,
+            "mape": 0.07417189589554589
+          },
+          {
+            "minutes": 30,
+            "mae_mph": 3.1900676750263868,
+            "rmse_mph": 6.606687240197866,
+            "mape": 0.08922453719970684
+          },
+          {
+            "minutes": 60,
+            "mae_mph": 3.5733856620118623,
+            "rmse_mph": 7.564037082126459,
+            "mape": 0.10349570508825563
+          }
+        ]
+      },
+      "validation_mae_mph": 2.8708390482102564,
+      "pilot": {
+        "updates": 60,
+        "median_step_ms": 17.150652000054833,
+        "peak_allocated_bytes": 688491520,
+        "peak_reserved_bytes": 968884224,
+        "last_loss_mph": 3.746018409729004
+      },
+      "graph": {
+        "edges": 884,
+        "isolated_incoming_rows": 43,
+        "median_edge_distance_km": 8.673928683883778
+      }
+    }
+  }
+}

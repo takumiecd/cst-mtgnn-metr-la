@@ -29,6 +29,26 @@ own CSV, provide a timestamp column followed by all 207 METR-LA sensor-ID
 columns at five-minute intervals and omit `--test-index`. The CLI forecasts
 from the last 12 rows and accepts any sensor-column order.
 
+## Results
+
+Masked test MAE in miles per hour. Lower is better.
+
+| Model | 15 min | 30 min | 60 min | All 12 horizons | Graph parameters |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| MTGNN | 2.938 | 3.401 | 3.960 | 3.355 | 19,840 |
+| CST MTGNN | 2.809 | 3.190 | 3.573 | 3.132 | 3,072 |
+
+The CST graph reduced graph-generator parameters by 84.5%. Its average
+test MAE was 6.7% lower. The graph contains 884 positive directed edges
+before self-loops, compared with 4,140 from the baseline. In a 60-update
+RTX 4090 pilot after ten warmup updates, median update time was
+16.08 ms for the baseline and 17.15 ms for CST. The full runs use one
+training seed and a geographic prior in the CST graph.
+
+![Training and validation MAE for both graph models](results/learning-curves.png)
+
+[Machine-readable results](results/summary.json)
+
 ## Training and evaluation
 
 The baseline follows the MIT-licensed [MTGNN source](https://github.com/nnzhan/MTGNN/tree/f811746fa7022ebf336f9ecd2434af5f365ecbf6)
