@@ -1,0 +1,233 @@
+{
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "torch": "2.9.1+cu128",
+  "sensor_outages": 33,
+  "mask_seed": 271828,
+  "dataset_sha256": "c39dc8f5f3a7f1e9e9deeab1f3fdfa7b87d2b4e45b4075d4c3bd3c62c3051ef2",
+  "results": {
+    "baseline_coords-s17": {
+      "validation": {
+        "windows": 5201,
+        "target_readings": 20282316,
+        "affected_target_readings": 2059423,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.7986759791845128,
+            "affected_mae_mph": 1.7984583372164267
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.1880824944729165,
+            "affected_mae_mph": 37.276948060053
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.8369122112989376,
+            "affected_mae_mph": 2.165050751405836
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.406447152405859,
+            "affected_mae_mph": 41.11516105526291
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.135797996369953,
+            "affected_mae_mph": 5.0535659219755695
+          }
+        }
+      },
+      "test": {
+        "windows": 10412,
+        "target_readings": 40604196,
+        "affected_target_readings": 4122895,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.7316484443627878,
+            "affected_mae_mph": 1.7359678995630694
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.2098900025315755,
+            "affected_mae_mph": 37.86261033047438
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.7630182913642283,
+            "affected_mae_mph": 2.043912192219631
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.397973411429127,
+            "affected_mae_mph": 41.569565992869244
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.0425814412315377,
+            "affected_mae_mph": 4.789180177310258
+          }
+        }
+      }
+    },
+    "cst-s17": {
+      "validation": {
+        "windows": 5201,
+        "target_readings": 20282316,
+        "affected_target_readings": 2059423,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.6576319756883962,
+            "affected_mae_mph": 1.655064581192124
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.016933234459196,
+            "affected_mae_mph": 35.7149206997294
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.6917819906677147,
+            "affected_mae_mph": 1.9921784875511952
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.193024282927215,
+            "affected_mae_mph": 39.67118731716415
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.0108213086781914,
+            "affected_mae_mph": 5.07965161234233
+          }
+        }
+      },
+      "test": {
+        "windows": 10412,
+        "target_readings": 40604196,
+        "affected_target_readings": 4122895,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.6161049849191804,
+            "affected_mae_mph": 1.6186623380743657
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.097308915709722,
+            "affected_mae_mph": 36.23532635356389
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.6439042415109246,
+            "affected_mae_mph": 1.9040244472085968
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.220138928499605,
+            "affected_mae_mph": 40.06005249330174
+          },
+          "60m_carry": {
+            "all_mae_mph": 1.9391998381758424,
+            "affected_mae_mph": 4.818912434834265
+          }
+        }
+      }
+    },
+    "baseline_coords-s29": {
+      "validation": {
+        "windows": 5201,
+        "target_readings": 20282316,
+        "affected_target_readings": 2059423,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.8253767486148933,
+            "affected_mae_mph": 1.8207944986018485
+          },
+          "15m_zero": {
+            "all_mae_mph": 5.957604833723808,
+            "affected_mae_mph": 36.45728658057809
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.8683890866308615,
+            "affected_mae_mph": 2.224826995361309
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.675456814644789,
+            "affected_mae_mph": 41.178696762570254
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.1781277283066336,
+            "affected_mae_mph": 5.208095832313604
+          }
+        }
+      },
+      "test": {
+        "windows": 10412,
+        "target_readings": 40604196,
+        "affected_target_readings": 4122895,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.749784317870812,
+            "affected_mae_mph": 1.7509043229775596
+          },
+          "15m_zero": {
+            "all_mae_mph": 5.994704977442615,
+            "affected_mae_mph": 37.03208773692042
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.786066501297086,
+            "affected_mae_mph": 2.092094400552984
+          },
+          "60m_zero": {
+            "all_mae_mph": 6.6790182582702,
+            "affected_mae_mph": 41.61659201456429
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.0742120409212856,
+            "affected_mae_mph": 4.920043225654263
+          }
+        }
+      }
+    },
+    "cst-s29": {
+      "validation": {
+        "windows": 5201,
+        "target_readings": 20282316,
+        "affected_target_readings": 2059423,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.6578887336341266,
+            "affected_mae_mph": 1.655601019453479
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.1960453047796875,
+            "affected_mae_mph": 36.90205282998879
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.6901986707845529,
+            "affected_mae_mph": 1.985657445781466
+          },
+          "60m_zero": {
+            "all_mae_mph": 5.79146704647962,
+            "affected_mae_mph": 37.48281593756028
+          },
+          "60m_carry": {
+            "all_mae_mph": 2.003309966747887,
+            "affected_mae_mph": 5.033819324149649
+          }
+        }
+      },
+      "test": {
+        "windows": 10412,
+        "target_readings": 40604196,
+        "affected_target_readings": 4122895,
+        "cases": {
+          "clean": {
+            "all_mae_mph": 1.616786750628192,
+            "affected_mae_mph": 1.6188483520344294
+          },
+          "15m_zero": {
+            "all_mae_mph": 6.284130959149915,
+            "affected_mae_mph": 37.34551593997317
+          },
+          "15m_carry": {
+            "all_mae_mph": 1.6425358163829744,
+            "affected_mae_mph": 1.8975651838497425
+          },
+          "60m_zero": {
+            "all_mae_mph": 5.79742305993493,
+            "affected_mae_mph": 37.74931577856047
+          },
+          "60m_carry": {
+            "all_mae_mph": 1.9347049002252794,
+            "affected_mae_mph": 4.782409095430724
+          }
+        }
+      }
+    }
+  }
+}

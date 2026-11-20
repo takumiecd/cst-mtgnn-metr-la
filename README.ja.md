@@ -7,6 +7,8 @@ METR-LAの207センサーで、先1時間の交通速度を予測するモデル
 `CSTLinear`からスコアを作る方式と比較しました。時間方向の畳み込み、グラフ伝播、
 予測ヘッドは元のアーキテクチャを使います。
 
+[PEMS-BAYの欠測・配信遅延評価を見る](#欠測と配信遅延への耐性)。
+
 ## センサー座標を揃えた3シードの結果
 
 **両モデルに同じセンサー座標を与えても、全3シードでCST版のテスト誤差が小さくなりました。**
@@ -62,6 +64,21 @@ python infer.py data/METR-LA.csv --test-index 0 --sensor 773869 --variant cst
 `--device cuda` を指定します。独自のCSVを使う場合は、先頭を時刻列として、5分刻みで
 METR-LAの207センサーIDを全列に入れ、`--test-index` を省きます。センサー列の並び順は
 自由で、最後の12行から先1時間を予測します。
+
+### 同じモデルで繰り返し予測するときにグラフを再利用
+
+評価モードでは学習済みグラフが固定されます。同じ重みと207センサーで繰り返し予測する場合、
+隣接行列を一度計算し、MTGNNの固定隣接行列を使う経路に渡せます。公開チェックポイントを
+使ったテスト入力8窓では、予測の最大差は0 mphでした。
+
+| モデル（バッチ1） | 毎回グラフを作成 | グラフを再利用 |
+| --- | ---: | ---: |
+| MTGNN | 4.46 ms | 4.24 ms |
+| CST MTGNN | 5.59 ms | 4.19 ms |
+
+Apple M4 ProのCPUでPyTorchを2スレッド使い、40回の推論の中央値を計測しました。
+事前計算したFP32の隣接行列は167.4 KiBです。[計測コード](benchmark_inference_graph.py)には
+8窓をまとめた推論も記録する設定があります。
 
 ## 公開チェックポイントの初回比較
 
@@ -119,6 +136,154 @@ for variant in baseline cst; do
 done
 python export.py --run output/paired --output output/weights
 ```
+
+## PEMS-BAYでの別道路網の検証
+
+ベイエリア325センサーの[交通速度データ](https://zenodo.org/records/5146275)と
+[DCRNNの座標](https://github.com/liyaguang/DCRNN/blob/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations_bay.csv)を
+使い、両モデルを一から学習しました。RTX 4090 1枚で時系列順に70/10/20で分割し、
+10エポック、バッチ64、2シードで比較しました。各ペアのグラフ以外の初期重みと
+データ順を揃え、検証MAEで選んだチェックポイントをテスト10,412窓で評価しました。
+時刻は米太平洋時間を保持し、夏時間が始まる日もUTCで5分間隔を確認しています。
+
+| テストMAE（mph）、2シード平均 | 座標付きMTGNN | CST版 | 誤差減少 |
+| --- | ---: | ---: | ---: |
+| 全12予測時点 | 1.741 | 1.616 | 7.1% |
+| 60分先 | 2.207 | 1.986 | 10.0% |
+| 実測45 mph未満 | 7.553 | 6.751 | 10.6% |
+
+全12時点のMAEは両シードでCST版が下回りました。直近速度を維持する予測は2.170 mph、
+曜日と時刻別の中央値を直近値で補正する予測は1.894 mphでした。補正の強さは検証分割で
+選びました。CST版のグラフ部分は29,440から3,072パラメータに減り、短時間計測の
+更新時間中央値はMTGNNの37.6 msに対して38.8 msでした。ピーク割当は両方とも約2.30 GiBです。
+
+[検証曲線](results/pems-bay/validation-curves.png) ·
+[シードごとの結果](results/pems-bay/test-by-seed.csv) ·
+[指標と比較手法の集計](results/pems-bay/summary.json)
+
+初回シードのSafetensorsはCPUに読み込み、予測CLIで動作を確認しました。
+エクスポートには `baseline_coords/` と `cst/` のペアを指定します。
+座標ファイルにはDCRNN配布のCSVに `sensor_id,latitude,longitude` のヘッダーを付けます。
+
+```bash
+for seed in 17 29; do
+  for variant in baseline_coords cst; do
+    OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --dataset pems-bay \
+      --variant "$variant" --data data/PEMS-BAY.csv --locations data/locations-bay.csv \
+      --epochs 10 --batch-size 64 --atoms 512 --seed "$seed" \
+      --output "output/pems-bay/s$seed/$variant"
+  done
+done
+python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
+  --output output/pems-bay/weights-s17
+```
+
+### 100エポックの本比較
+
+RTX 4090 1枚で両モデルを一から100エポックずつ、シード17・29・43で学習しました。
+同じデータ分割とバッチ64を使い、各ペアでグラフ以外の初期重みとデータ順を揃えました。
+各ランで検証MAEが最小のチェックポイントを使い、テストMAEを測りました。
+
+| テストMAE（mph）、3シード平均 | 座標付きMTGNN | CST版 | 誤差減少 |
+| --- | ---: | ---: | ---: |
+| 全12予測時点 | 1.745 | 1.586 | 9.1% |
+| 15分先 | 1.413 | 1.333 | 5.6% |
+| 30分先 | 1.794 | 1.654 | 7.8% |
+| 60分先 | 2.206 | 1.928 | 12.6% |
+
+全時点のテストMAEはCST版が3シードすべてで下回りました。検証最良時点は
+座標付きMTGNNが20・11・10エポック、CST版が74・89・81エポックでした。
+1ランの平均時間は36.43分と38.03分、ピーク割当はそれぞれ2.296 GiBと2.303 GiBです。
+全6件のチェックポイントをSHA-256で照合しました。
+
+[検証曲線](results/pems-bay-100/validation-curves.png) ·
+[シード別結果](results/pems-bay-100/test-by-seed.csv) ·
+[集計とチェックポイントのハッシュ](results/pems-bay-100/summary.json)
+
+### 欠測と配信遅延への耐性
+
+RTX 4090 1枚で、100エポック学習の検証最良チェックポイント6件を使い、
+テスト10,412窓を再生しました。各チェックポイントで、元の未加工入力時のMAEも
+再現しました。入力の欠測はHTTPサービスと同じ方式で補完しました。直近1時間の
+入力窓内にある最後の有効速度を引き継ぎ、最初の有効値より前の欠測には学習時の
+平均速度を使いました。
+
+すべてのモデルとシードに同じ時系列の模擬障害を適用しました。6時間ごとに
+無作為に選んだセンサーと座標が近い32センサーを地域グループとしました。
+地域欠測30分と120分の開始時刻を揃え、地域遅延はこのグループに6時間継続して
+適用しました。予測時点で未着の測定値を入力から除き、正解の速度と時刻を
+維持しました。入力窓の本来有効な観測が1件以上届かなかったセンサーを
+影響対象としています。
+
+表は全12予測時点のMAE（mph）の3シード平均です。括弧内はCST版のMAEが
+低かったシード数です。
+
+| 入力条件 | 座標付きMTGNN | CST版 | 全体のMAE減少 | 影響センサーのMAE減少 |
+| --- | ---: | ---: | ---: | ---: |
+| 障害なし | 1.744 | 1.585 | 9.1% (3/3) | — |
+| 地域欠測30分 | 1.749 | 1.589 | 9.2% (3/3) | 11.4% (3/3) |
+| 地域欠測120分 | 1.823 | 1.658 | 9.0% (3/3) | 7.2% (3/3) |
+| 地域遅延15分 | 1.780 | 1.610 | 9.6% (3/3) | 11.7% (3/3) |
+| 全体遅延5分 | 1.904 | 1.681 | 11.7% (3/3) | 11.7% (3/3) |
+| 全体遅延15分 | 2.151 | 1.865 | 13.3% (3/3) | 13.3% (3/3) |
+| 全体遅延30分 | 2.537 | 2.201 | 13.2% (3/3) | 13.2% (3/3) |
+| 地域欠測120分＋全体遅延15分 | 2.233 | 1.946 | 12.9% (3/3) | 12.9% (3/3) |
+
+全体の配信が5分遅れたCST版は 1.681 mphで、障害なしの
+座標付きMTGNN（1.744 mph）を下回りました。15分遅延では
+CST版のMAEは 1.865 mphに上がりました。2時間の地域欠測で
+影響を受けたセンサーのMAEは、CST版で 3.338 から
+3.099 mphに下がりました。
+
+再実行するには、各グループの `results/<variant>-s<seed>/best.pt` と
+`metrics.json` が入ったディレクトリを指定します。
+
+```bash
+python benchmark_pems_feed.py data/PEMS-BAY.csv data/locations-bay.csv \
+  output/pems-bay-100-seeds-17-29 output/pems-bay-100-seed-43 \
+  output/pems-bay-feed.json
+```
+
+[条件ごとのMAE減少率](results/pems-bay-feed-robustness/feed-robustness.png) ·
+[シード別結果](results/pems-bay-feed-robustness/test-by-seed.csv) ·
+[対象・予測時点別の指標と実験記録](results/pems-bay-feed-robustness/summary.json) ·
+[再生評価コード](benchmark_pems_feed.py) ·
+[Hugging Faceの評価結果](https://huggingface.co/takumiecd/cst-mtgnn-metr-la#pems-bay-feed-outage-and-delay-evaluation)
+
+### PEMS-BAYの全325センサーをHTTPで予測
+
+エクスポートしたPEMS-BAYの重みでローカルHTTPサービスを起動します。
+
+```bash
+python forecast_service.py --config output/pems-bay/weights-s17/config.json \
+  --weights output/pems-bay/weights-s17/cst.safetensors
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS -H 'Content-Type: application/json' --data-binary @request.json \
+  http://127.0.0.1:8080/forecast
+```
+
+リクエストには `timestamps`（UTCオフセット付きISO 8601で5分間隔の12点）、
+`sensor_ids`（列順のセンサーID）、`speeds_mph`（IDごとに速度を並べた12行）を指定します。
+`null`、ゼロ、省略したセンサー列は欠測として扱います。既定では入力窓内の直近有効値を
+センサーごとに引き継ぎ、先頭の欠測や全点が欠測の列は学習時の平均速度で補います。
+応答にはチェックポイント順の全325センサー、次の12時点と予測速度、欠測値数と全点欠測の
+センサー数が含まれます。モデルの読み込みと隣接行列の計算は起動時の一度です。
+
+Apple M4 Pro CPU、PyTorch 2スレッドでローカルHTTPリクエストを40回計測し、中央値は
+9.24 ms、95パーセンタイルは9.85 msでした。同じテスト入力で、従来の単一センサーCLIの
+予測値と一致しました。[動作検証](results/pems-bay/service.json)
+
+各入力窓で無作為に選んだ33センサーを欠測させ、モデルと補完方法の間で同じマスクを使いました。
+補完方法は検証分割で選びました。表はテスト10,412窓で欠測対象になったセンサーのMAEを、
+CST版の2シードで平均した値です。
+
+| 欠測の範囲 | ゼロのまま入力 | 有効値から補完 |
+| --- | ---: | ---: |
+| 直近15分 | 36.79 mph | 1.90 mph |
+| 入力の60分全体 | 38.90 mph | 4.80 mph |
+
+人為的な欠測を入れる前の同じ対象センサーでは、MAEは1.62 mphでした。
+[欠測試験の結果](results/pems-bay/outages.json) · [計測コード](benchmark_sensor_outages.py)
 
 新規コードと配布重みは[Apache-2.0](LICENSE)、同梱したMTGNNソースは
 [MITライセンス](upstream/LICENSE)です。

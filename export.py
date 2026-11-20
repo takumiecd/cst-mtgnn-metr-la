@@ -1,4 +1,4 @@
-"""Export verified Safetensors and the METR-LA model declaration."""
+"""Export verified Safetensors and the traffic model declaration."""
 
 from __future__ import annotations
 
@@ -11,17 +11,22 @@ import torch
 from safetensors.torch import save_file
 from torchcst.hub import load_safetensors
 
-from model import NODES, build_model, forecast
+from model import HORIZON, build_model, forecast
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--baseline-variant",
+        choices=("baseline", "baseline_coords"),
+        default="baseline",
+    )
     args = parser.parse_args()
     results = {
         variant: json.loads((args.run / variant / "metrics.json").read_text())
-        for variant in ("baseline", "cst")
+        for variant in (args.baseline_variant, "cst")
     }
     original, cst = results.values()
     for key in (
@@ -36,7 +41,15 @@ def main():
 
     args.output.mkdir(parents=True, exist_ok=False)
     config = cst["config"]
-    inputs = torch.randn(2, 2, NODES, 12, generator=torch.Generator().manual_seed(17))
+    if cst.get("dataset") == "pems-bay":
+        config = config | {"timezone": "America/Los_Angeles"}
+    inputs = torch.randn(
+        2,
+        2,
+        len(config["sensor_ids"]),
+        HORIZON,
+        generator=torch.Generator().manual_seed(17),
+    )
     with torch.inference_mode():
         for variant in results:
             factory = partial(build_model, variant, config)

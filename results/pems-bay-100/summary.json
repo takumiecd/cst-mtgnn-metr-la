@@ -1,0 +1,137 @@
+{
+  "epochs": 100,
+  "epochs_per_arm": 100,
+  "test_windows": 10412,
+  "by_seed": [
+    {
+      "seed": 17,
+      "variant": "baseline_coords",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 20,
+      "test_mae": 1.7640890231135171,
+      "mae_15_min": 1.4236689957190494,
+      "mae_30_min": 1.8104187683059434,
+      "mae_60_min": 2.2419616895107826,
+      "elapsed_s": 2186.6622765130014,
+      "peak_allocated_bytes": 2465267200,
+      "peak_reserved_bytes": 3365928960,
+      "graph_parameters": 29440,
+      "checkpoint_sha256": "02adc4ca87d157380d29981e045f8b7c3861f6b964a8f4edc2a9d397ba5d7dee"
+    },
+    {
+      "seed": 17,
+      "variant": "cst",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 74,
+      "test_mae": 1.5859849791377545,
+      "mae_15_min": 1.3312582099075045,
+      "mae_30_min": 1.6522049625768183,
+      "mae_60_min": 1.9334181931311623,
+      "elapsed_s": 2281.815003657015,
+      "peak_allocated_bytes": 2473303040,
+      "peak_reserved_bytes": 3372220416,
+      "graph_parameters": 3072,
+      "checkpoint_sha256": "11a574e70b869793d05f5f02605d360fd4d2c9da6ed8a8c8165d3daf54d7180d"
+    },
+    {
+      "seed": 29,
+      "variant": "baseline_coords",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 11,
+      "test_mae": 1.7441679854818264,
+      "mae_15_min": 1.4105748375357345,
+      "mae_30_min": 1.79441762282445,
+      "mae_60_min": 2.2036949574109768,
+      "elapsed_s": 2185.8182625419868,
+      "peak_allocated_bytes": 2465267200,
+      "peak_reserved_bytes": 3365928960,
+      "graph_parameters": 29440,
+      "checkpoint_sha256": "b68429b6ca651b8f7743fe0ee0cb65b949c972614eb4a6a9dcb42c4825af4f2f"
+    },
+    {
+      "seed": 29,
+      "variant": "cst",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 89,
+      "test_mae": 1.587130290895364,
+      "mae_15_min": 1.33545322089924,
+      "mae_30_min": 1.6576150565084304,
+      "mae_60_min": 1.924386487509317,
+      "elapsed_s": 2283.2224578500027,
+      "peak_allocated_bytes": 2473303040,
+      "peak_reserved_bytes": 3372220416,
+      "graph_parameters": 3072,
+      "checkpoint_sha256": "eda1f0e7a001e8dba0f3a09b235addcf2fd951d7a04b6a105baec993a14fefec"
+    },
+    {
+      "seed": 43,
+      "variant": "baseline_coords",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 10,
+      "test_mae": 1.7256266020553588,
+      "mae_15_min": 1.4045303567220262,
+      "mae_30_min": 1.7779249033832285,
+      "mae_60_min": 2.1733721427040678,
+      "elapsed_s": 2185.408930821024,
+      "peak_allocated_bytes": 2465267200,
+      "peak_reserved_bytes": 3365928960,
+      "graph_parameters": 29440,
+      "checkpoint_sha256": "3c83d867c75feeeb996d40145d31514d5c9801ac6f6c5b940be6fe628652faea"
+    },
+    {
+      "seed": 43,
+      "variant": "cst",
+      "gpu": "NVIDIA GeForce RTX 4090",
+      "torch": "2.9.1+cu128",
+      "best_epoch": 81,
+      "test_mae": 1.58415268295729,
+      "mae_15_min": 1.3333867984967624,
+      "mae_30_min": 1.6523316114649615,
+      "mae_60_min": 1.9252087178434936,
+      "elapsed_s": 2281.314929162996,
+      "peak_allocated_bytes": 2473303040,
+      "peak_reserved_bytes": 3372220416,
+      "graph_parameters": 3072,
+      "checkpoint_sha256": "377441edcb1173fff37a211623182e345bfda7645698591f2e283647e7a7c496"
+    }
+  ],
+  "mean_test": {
+    "baseline_coords": {
+      "test_mae": 1.7446278702169007,
+      "mae_15_min": 1.41292472999227,
+      "mae_30_min": 1.794253764837874,
+      "mae_60_min": 2.2063429298752757
+    },
+    "cst": {
+      "test_mae": 1.585755984330136,
+      "mae_15_min": 1.3333660764345023,
+      "mae_30_min": 1.6540505435167367,
+      "mae_60_min": 1.927671132827991
+    }
+  },
+  "paired_cst_minus_baseline": {
+    "17": {
+      "test_mae": -0.17810404397576263,
+      "mae_15_min": -0.09241078581154483,
+      "mae_30_min": -0.15821380572912513,
+      "mae_60_min": -0.3085434963796203
+    },
+    "29": {
+      "test_mae": -0.15703769458646244,
+      "mae_15_min": -0.07512161663649453,
+      "mae_30_min": -0.1368025663160195,
+      "mae_60_min": -0.2793084699016597
+    },
+    "43": {
+      "test_mae": -0.14147391909806872,
+      "mae_15_min": -0.07114355822526375,
+      "mae_30_min": -0.12559329191826696,
+      "mae_60_min": -0.2481634248605742
+    }
+  }
+}
