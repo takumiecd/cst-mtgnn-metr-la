@@ -191,6 +191,31 @@ python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
   --output output/pems-bay/weights-s17
 ```
 
+### Full 100-epoch comparison
+
+On one RTX 4090, we repeated the coordinate-controlled comparison from
+scratch for 100 epochs per variant and seed (17, 29, 43). Every run uses the
+same split, batch size 64, and the same seed-specific initial non-graph
+weights and data order within each pair. Test MAE uses each run's
+validation-selected checkpoint.
+
+| Test MAE (mph), three-seed mean | MTGNN + coordinates | CST + coordinates | Reduction |
+| --- | ---: | ---: | ---: |
+| All 12 forecast steps | 1.745 | 1.586 | 9.1% |
+| 15 minutes ahead | 1.413 | 1.333 | 5.6% |
+| 30 minutes ahead | 1.794 | 1.654 | 7.8% |
+| 60 minutes ahead | 2.206 | 1.928 | 12.6% |
+
+CST had lower overall test MAE in all three seeds. The baseline selected
+epochs 20, 11, and 10, while CST selected epochs 74, 89, and 81.
+Average time per run was 36.43 min for the baseline and 38.03 min for CST.
+Peak allocated memory was 2.296 GiB and 2.303 GiB, respectively.
+All six checkpoints were verified by SHA-256.
+
+[Validation curves](results/pems-bay-100/validation-curves.png) ·
+[Per-seed results](results/pems-bay-100/test-by-seed.csv) ·
+[Verified metrics and checkpoint hashes](results/pems-bay-100/summary.json)
+
 ### Serve all 325 PEMS-BAY sensors
 
 Start the local HTTP service with the exported PEMS-BAY checkpoint.
