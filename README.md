@@ -7,6 +7,8 @@ compares the [MTGNN](https://arxiv.org/abs/2005.11650) learned sensor graph
 with a graph whose scores come from one `CSTLinear`. The time-series
 convolutions, graph propagation and forecast head use the original architecture.
 
+[See the PEMS-BAY outage and delay evaluation](#feed-outages-and-latency).
+
 ## Three-seed results with shared sensor coordinates
 
 **CST had lower test MAE in all three seeds when both models received the same
@@ -265,7 +267,8 @@ python benchmark_pems_feed.py data/PEMS-BAY.csv data/locations-bay.csv \
 [Reduction by scenario](results/pems-bay-feed-robustness/feed-robustness.png) ·
 [Per-seed results](results/pems-bay-feed-robustness/test-by-seed.csv) ·
 [All groups, horizon metrics and provenance](results/pems-bay-feed-robustness/summary.json) ·
-[Replay code](benchmark_pems_feed.py)
+[Replay code](benchmark_pems_feed.py) ·
+[Hugging Face evaluation](https://huggingface.co/takumiecd/cst-mtgnn-metr-la#pems-bay-feed-outage-and-delay-evaluation)
 
 ### Serve all 325 PEMS-BAY sensors
 

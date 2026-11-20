@@ -7,6 +7,8 @@ METR-LAの207センサーで、先1時間の交通速度を予測するモデル
 `CSTLinear`からスコアを作る方式と比較しました。時間方向の畳み込み、グラフ伝播、
 予測ヘッドは元のアーキテクチャを使います。
 
+[PEMS-BAYの欠測・配信遅延評価を見る](#欠測と配信遅延への耐性)。
+
 ## センサー座標を揃えた3シードの結果
 
 **両モデルに同じセンサー座標を与えても、全3シードでCST版のテスト誤差が小さくなりました。**
@@ -245,7 +247,8 @@ python benchmark_pems_feed.py data/PEMS-BAY.csv data/locations-bay.csv \
 [条件ごとのMAE減少率](results/pems-bay-feed-robustness/feed-robustness.png) ·
 [シード別結果](results/pems-bay-feed-robustness/test-by-seed.csv) ·
 [対象・予測時点別の指標と実験記録](results/pems-bay-feed-robustness/summary.json) ·
-[再生評価コード](benchmark_pems_feed.py)
+[再生評価コード](benchmark_pems_feed.py) ·
+[Hugging Faceの評価結果](https://huggingface.co/takumiecd/cst-mtgnn-metr-la#pems-bay-feed-outage-and-delay-evaluation)
 
 ### PEMS-BAYの全325センサーをHTTPで予測
 
