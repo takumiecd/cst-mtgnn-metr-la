@@ -191,5 +191,45 @@ python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
   --output output/pems-bay/weights-s17
 ```
 
+### Serve all 325 PEMS-BAY sensors
+
+Start the local HTTP service with the exported PEMS-BAY checkpoint.
+
+```bash
+python forecast_service.py --config output/pems-bay/weights-s17/config.json \
+  --weights output/pems-bay/weights-s17/cst.safetensors
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS -H 'Content-Type: application/json' --data-binary @request.json \
+  http://127.0.0.1:8080/forecast
+```
+
+The request contains `timestamps` (12 consecutive five-minute ISO 8601
+timestamps with UTC offsets), `sensor_ids` (known sensor IDs in column
+order), and `speeds_mph` (12 rows with one reading per supplied sensor).
+`null`, zero, and omitted sensor columns are treated as missing. The default
+fills gaps with each sensor's latest observed reading within the input window.
+Leading gaps and entirely missing sensors use the training mean. The response
+returns all 325 sensors in checkpoint order, 12 future timestamps, 12 rows of
+predicted speeds, and counts of missing readings and fully missing sensors.
+The service loads the model and computes the adjacency once at startup.
+
+On the Apple M4 Pro CPU with two PyTorch threads, the median of 40 complete
+local HTTP requests was 9.24 ms and the 95th percentile was 9.85 ms.
+The response matched the earlier single-sensor CLI for the same held-out input.
+[Service verification](results/pems-bay/service.json)
+
+We simulated an outage of 33 randomly selected sensors per input window,
+with the same outage masks across models and policies. Validation selected
+the default policy. The following are test MAEs for the affected sensors
+on 10,412 windows across both CST seeds.
+
+| Outage | Feed zeros | Fill from available readings |
+| --- | ---: | ---: |
+| Last 15 minutes | 36.79 mph | 1.90 mph |
+| Entire 60-minute input window | 38.90 mph | 4.80 mph |
+
+With no simulated outage, MAE for the same selected sensors was 1.62 mph.
+[Outage results](results/pems-bay/outages.json) · [Benchmark](benchmark_sensor_outages.py)
+
 New code and released weights use [Apache-2.0](LICENSE). The vendored
 MTGNN source uses its [MIT license](upstream/LICENSE).

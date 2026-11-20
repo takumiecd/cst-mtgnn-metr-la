@@ -176,5 +176,40 @@ python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
   --output output/pems-bay/weights-s17
 ```
 
+### PEMS-BAYの全325センサーをHTTPで予測
+
+エクスポートしたPEMS-BAYの重みでローカルHTTPサービスを起動します。
+
+```bash
+python forecast_service.py --config output/pems-bay/weights-s17/config.json \
+  --weights output/pems-bay/weights-s17/cst.safetensors
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS -H 'Content-Type: application/json' --data-binary @request.json \
+  http://127.0.0.1:8080/forecast
+```
+
+リクエストには `timestamps`（UTCオフセット付きISO 8601で5分間隔の12点）、
+`sensor_ids`（列順のセンサーID）、`speeds_mph`（IDごとに速度を並べた12行）を指定します。
+`null`、ゼロ、省略したセンサー列は欠測として扱います。既定では入力窓内の直近有効値を
+センサーごとに引き継ぎ、先頭の欠測や全点が欠測の列は学習時の平均速度で補います。
+応答にはチェックポイント順の全325センサー、次の12時点と予測速度、欠測値数と全点欠測の
+センサー数が含まれます。モデルの読み込みと隣接行列の計算は起動時の一度です。
+
+Apple M4 Pro CPU、PyTorch 2スレッドでローカルHTTPリクエストを40回計測し、中央値は
+9.24 ms、95パーセンタイルは9.85 msでした。同じテスト入力で、従来の単一センサーCLIの
+予測値と一致しました。[動作検証](results/pems-bay/service.json)
+
+各入力窓で無作為に選んだ33センサーを欠測させ、モデルと補完方法の間で同じマスクを使いました。
+補完方法は検証分割で選びました。表はテスト10,412窓で欠測対象になったセンサーのMAEを、
+CST版の2シードで平均した値です。
+
+| 欠測の範囲 | ゼロのまま入力 | 有効値から補完 |
+| --- | ---: | ---: |
+| 直近15分 | 36.79 mph | 1.90 mph |
+| 入力の60分全体 | 38.90 mph | 4.80 mph |
+
+人為的な欠測を入れる前の同じ対象センサーでは、MAEは1.62 mphでした。
+[欠測試験の結果](results/pems-bay/outages.json) · [計測コード](benchmark_sensor_outages.py)
+
 新規コードと配布重みは[Apache-2.0](LICENSE)、同梱したMTGNNソースは
 [MITライセンス](upstream/LICENSE)です。

@@ -1,0 +1,13 @@
+{
+  "device": "Apple M4 Pro CPU",
+  "torch_threads": 2,
+  "timed_http_requests": 40,
+  "request_sensor_count": 325,
+  "forecast_steps": 12,
+  "median_ms": 9.238270344212651,
+  "p95_ms": 9.84537461772561,
+  "legacy_cli_max_difference_mph": 0.0,
+  "reordered_input_same_output": true,
+  "verified_missing_sensors": 33,
+  "verified_invalid_requests": 3
+}
