@@ -67,6 +67,23 @@ own CSV, provide a timestamp column followed by all 207 METR-LA sensor-ID
 columns at five-minute intervals and omit `--test-index`. The CLI forecasts
 from the last 12 rows and accepts any sensor-column order.
 
+### Reuse the learned graph for repeated forecasts
+
+The learned graph is fixed once a model is in evaluation mode. For a worker
+that forecasts repeatedly with the same weights and all 207 sensors, the
+benchmark computes the adjacency once and supplies it through MTGNN's
+predefined adjacency path. With the published checkpoints, the maximum
+prediction difference was 0 mph for eight held-out input windows.
+
+| Model, batch 1 | Build graph every call | Reuse graph |
+| --- | ---: | ---: |
+| MTGNN | 4.46 ms | 4.24 ms |
+| CST MTGNN | 5.59 ms | 4.19 ms |
+
+These are median inference times over 40 calls on an Apple M4 Pro CPU with
+two PyTorch threads. The precomputed FP32 adjacency is 167.4 KiB. The
+[benchmark](benchmark_inference_graph.py) also measures eight-window batches.
+
 ## Initial comparison for the published checkpoints
 
 Masked test MAE in miles per hour. Lower is better.
@@ -127,6 +144,51 @@ for variant in baseline cst; do
     --batch-size 64 --atoms 512 --seed 17 --output "output/paired/$variant"
 done
 python export.py --run output/paired --output output/weights
+```
+
+## PEMS-BAY transfer experiment
+
+Both models train from scratch on 325 Bay Area sensors using the same
+[DCRNN coordinates](https://github.com/liyaguang/DCRNN/blob/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations_bay.csv)
+and [PEMS-BAY speed series](https://zenodo.org/records/5146275).
+The protocol uses a chronological 70/10/20 split, 10 epochs, batch size 64,
+and two paired seeds on one RTX 4090. Each pair shares the initial non-graph
+weights and data order. The model with the lowest validation MAE is evaluated
+on 10,412 test windows. PEMS-BAY timestamps use Pacific local time, with
+cadence checked in UTC through the March daylight-saving transition.
+
+| Test MAE (mph), two-seed mean | MTGNN + coordinates | CST + coordinates | Reduction |
+| --- | ---: | ---: | ---: |
+| All 12 forecast steps | 1.741 | 1.616 | 7.1% |
+| 60 minutes ahead | 2.207 | 1.986 | 10.0% |
+| Measurements below 45 mph | 7.553 | 6.751 | 10.6% |
+
+CST had lower overall MAE in both paired seeds. The persistence baseline
+scored 2.170 mph, and the weekly median profile with a validation-tuned
+correction from the latest measurement scored 1.894 mph. CST reduced the
+graph parameters from 29,440 to 3,072. The pilot step median was 37.6 ms for
+MTGNN and 38.8 ms for CST, with about 2.30 GiB allocated at peak in both runs.
+
+[Validation curves](results/pems-bay/validation-curves.png) ·
+[Per-seed results](results/pems-bay/test-by-seed.csv) ·
+[Metrics and baselines](results/pems-bay/summary.json)
+
+The first seed's Safetensors were reloaded on CPU and tested through the
+forecast CLI. The export command takes paired runs in `baseline_coords/` and
+`cst/`. The coordinate file is the DCRNN CSV with the header
+`sensor_id,latitude,longitude`.
+
+```bash
+for seed in 17 29; do
+  for variant in baseline_coords cst; do
+    OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --dataset pems-bay \
+      --variant "$variant" --data data/PEMS-BAY.csv --locations data/locations-bay.csv \
+      --epochs 10 --batch-size 64 --atoms 512 --seed "$seed" \
+      --output "output/pems-bay/s$seed/$variant"
+  done
+done
+python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
+  --output output/pems-bay/weights-s17
 ```
 
 New code and released weights use [Apache-2.0](LICENSE). The vendored

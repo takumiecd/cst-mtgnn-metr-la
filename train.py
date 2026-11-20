@@ -11,10 +11,10 @@ from time import perf_counter
 
 import torch
 from torch import nn
+from torchcst import CSTAdamW
 
 from data import get_batch, training_data
-from model import HORIZON, build_model, forecast
-from torchcst import CSTAdamW
+from model import HORIZON, NODES, build_model, forecast
 
 
 def shared_hash(model):
@@ -92,6 +92,7 @@ def main():
         "--variant", choices=("baseline", "baseline_coords", "cst"), required=True
     )
     parser.add_argument("--data", required=True, type=Path)
+    parser.add_argument("--dataset", choices=("metr-la", "pems-bay"), default="metr-la")
     parser.add_argument("--locations", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--atoms", type=int, default=512)
@@ -107,7 +108,12 @@ def main():
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     speeds, clock, (train, validation, test), config = training_data(
-        args.data, args.locations, args.atoms, "cuda"
+        args.data,
+        args.locations,
+        args.atoms,
+        "cuda",
+        expected_nodes=325 if args.dataset == "pems-bay" else NODES,
+        timezone="America/Los_Angeles" if args.dataset == "pems-bay" else None,
     )
     args.output.mkdir(parents=True, exist_ok=False)
     torch.manual_seed(args.seed)
@@ -119,6 +125,7 @@ def main():
     shuffle = torch.Generator(device="cuda").manual_seed(args.seed)
     graph_params = sum(p.numel() for p in model.gc.parameters())
     result = {
+        "dataset": args.dataset,
         "variant": args.variant,
         "seed": args.seed,
         "epochs": args.epochs,

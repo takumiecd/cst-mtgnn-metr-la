@@ -63,6 +63,21 @@ python infer.py data/METR-LA.csv --test-index 0 --sensor 773869 --variant cst
 METR-LAの207センサーIDを全列に入れ、`--test-index` を省きます。センサー列の並び順は
 自由で、最後の12行から先1時間を予測します。
 
+### 同じモデルで繰り返し予測するときにグラフを再利用
+
+評価モードでは学習済みグラフが固定されます。同じ重みと207センサーで繰り返し予測する場合、
+隣接行列を一度計算し、MTGNNの固定隣接行列を使う経路に渡せます。公開チェックポイントを
+使ったテスト入力8窓では、予測の最大差は0 mphでした。
+
+| モデル（バッチ1） | 毎回グラフを作成 | グラフを再利用 |
+| --- | ---: | ---: |
+| MTGNN | 4.46 ms | 4.24 ms |
+| CST MTGNN | 5.59 ms | 4.19 ms |
+
+Apple M4 ProのCPUでPyTorchを2スレッド使い、40回の推論の中央値を計測しました。
+事前計算したFP32の隣接行列は167.4 KiBです。[計測コード](benchmark_inference_graph.py)には
+8窓をまとめた推論も記録する設定があります。
+
 ## 公開チェックポイントの初回比較
 
 欠損を除外したテストMAE。単位はmphで、小さいほど精度が高い。
@@ -118,6 +133,47 @@ for variant in baseline cst; do
     --batch-size 64 --atoms 512 --seed 17 --output "output/paired/$variant"
 done
 python export.py --run output/paired --output output/weights
+```
+
+## PEMS-BAYでの別道路網の検証
+
+ベイエリア325センサーの[交通速度データ](https://zenodo.org/records/5146275)と
+[DCRNNの座標](https://github.com/liyaguang/DCRNN/blob/602afd9d767d3aa1c9b3eac51710d6aeee12c227/data/sensor_graph/graph_sensor_locations_bay.csv)を
+使い、両モデルを一から学習しました。RTX 4090 1枚で時系列順に70/10/20で分割し、
+10エポック、バッチ64、2シードで比較しました。各ペアのグラフ以外の初期重みと
+データ順を揃え、検証MAEで選んだチェックポイントをテスト10,412窓で評価しました。
+時刻は米太平洋時間を保持し、夏時間が始まる日もUTCで5分間隔を確認しています。
+
+| テストMAE（mph）、2シード平均 | 座標付きMTGNN | CST版 | 誤差減少 |
+| --- | ---: | ---: | ---: |
+| 全12予測時点 | 1.741 | 1.616 | 7.1% |
+| 60分先 | 2.207 | 1.986 | 10.0% |
+| 実測45 mph未満 | 7.553 | 6.751 | 10.6% |
+
+全12時点のMAEは両シードでCST版が下回りました。直近速度を維持する予測は2.170 mph、
+曜日と時刻別の中央値を直近値で補正する予測は1.894 mphでした。補正の強さは検証分割で
+選びました。CST版のグラフ部分は29,440から3,072パラメータに減り、短時間計測の
+更新時間中央値はMTGNNの37.6 msに対して38.8 msでした。ピーク割当は両方とも約2.30 GiBです。
+
+[検証曲線](results/pems-bay/validation-curves.png) ·
+[シードごとの結果](results/pems-bay/test-by-seed.csv) ·
+[指標と比較手法の集計](results/pems-bay/summary.json)
+
+初回シードのSafetensorsはCPUに読み込み、予測CLIで動作を確認しました。
+エクスポートには `baseline_coords/` と `cst/` のペアを指定します。
+座標ファイルにはDCRNN配布のCSVに `sensor_id,latitude,longitude` のヘッダーを付けます。
+
+```bash
+for seed in 17 29; do
+  for variant in baseline_coords cst; do
+    OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python train.py --dataset pems-bay \
+      --variant "$variant" --data data/PEMS-BAY.csv --locations data/locations-bay.csv \
+      --epochs 10 --batch-size 64 --atoms 512 --seed "$seed" \
+      --output "output/pems-bay/s$seed/$variant"
+  done
+done
+python export.py --run output/pems-bay/s17 --baseline-variant baseline_coords \
+  --output output/pems-bay/weights-s17
 ```
 
 新規コードと配布重みは[Apache-2.0](LICENSE)、同梱したMTGNNソースは

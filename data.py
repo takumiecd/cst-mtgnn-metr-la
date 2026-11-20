@@ -1,10 +1,12 @@
-"""METR-LA loading, chronological target split and normalized model inputs."""
+"""Traffic speed loading, chronological target split and normalized model inputs."""
 
 from __future__ import annotations
 
 import csv
 import hashlib
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import torch
@@ -25,7 +27,7 @@ def location_chart(path: Path, sensor_ids: list[str]) -> list[list[float]]:
     return coords.tolist()
 
 
-def read_series(path: Path):
+def read_series(path: Path, expected_nodes: int = NODES, timezone: str | None = None):
     with path.open(newline="") as handle:
         reader = csv.reader(handle)
         header = next(reader)
@@ -35,12 +37,27 @@ def read_series(path: Path):
             rows.append(row[1:])
     sensor_ids = header[1:]
     speeds = np.asarray(rows, dtype=np.float32)
-    if speeds.ndim != 2 or speeds.shape[1] != NODES or len(set(sensor_ids)) != NODES:
-        raise ValueError("Expected METR-LA with 207 unique sensor columns")
+    if (
+        speeds.ndim != 2
+        or speeds.shape[1] != expected_nodes
+        or len(sensor_ids) != expected_nodes
+        or len(set(sensor_ids)) != expected_nodes
+    ):
+        raise ValueError(f"Expected {expected_nodes} unique sensor columns")
     if not np.isfinite(speeds).all() or (speeds < 0).any():
         raise ValueError("Expected finite, nonnegative traffic speeds")
     times = np.asarray(timestamps, dtype="datetime64[m]")
-    if not (np.diff(times) == np.timedelta64(5, "m")).all():
+    cadence = times
+    if timezone is not None:
+        zone = ZoneInfo(timezone)
+        cadence = np.array(
+            [
+                datetime.fromisoformat(t).replace(tzinfo=zone).timestamp()
+                for t in timestamps
+            ],
+            dtype=np.int64,
+        ).astype("datetime64[s]")
+    if not (np.diff(cadence) == np.timedelta64(5, "m")).all():
         raise ValueError("Expected contiguous five-minute timestamps")
     return sensor_ids, speeds, times
 
@@ -63,8 +80,15 @@ def sha256_file(path: Path) -> str:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def training_data(path: Path, locations: Path, atoms: int, device: str):
-    sensor_ids, speeds, times = read_series(path)
+def training_data(
+    path: Path,
+    locations: Path,
+    atoms: int,
+    device: str,
+    expected_nodes: int = NODES,
+    timezone: str | None = None,
+):
+    sensor_ids, speeds, times = read_series(path, expected_nodes, timezone)
     clock = time_of_day(times)
     origins = split_origins(len(speeds))
     offsets = np.arange(-HORIZON, 0)

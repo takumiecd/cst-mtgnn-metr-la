@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import torch
 from torch import nn
-
 from torchcst import BandwidthBounds, CSTLinear, TriweightSpec, chart_presets, kernels
+
 from upstream.layer import graph_constructor, retain_topk
 from upstream.net import gtnet
 
@@ -41,11 +41,12 @@ class CSTGraph(nn.Module):
 
 
 def build_model(variant: str, config: dict) -> nn.Module:
+    nodes = len(config["coordinates_km"])
     model = gtnet(
         gcn_true=True,
         buildA_true=True,
         gcn_depth=2,
-        num_nodes=NODES,
+        num_nodes=nodes,
         device="cpu",
         subgraph_size=TOP_K,
         tanhalpha=ALPHA,
@@ -57,8 +58,13 @@ def build_model(variant: str, config: dict) -> nn.Module:
         # Match the scale of the original unit-variance node embeddings.
         coordinates = coordinates / coordinates.square().mean().sqrt().clamp_min(1e-6)
         model.gc = graph_constructor(
-            NODES, TOP_K, model.gc.dim, "cpu",
-            alpha=ALPHA, static_feat=coordinates, append_static=True,
+            nodes,
+            TOP_K,
+            model.gc.dim,
+            "cpu",
+            alpha=ALPHA,
+            static_feat=coordinates,
+            append_static=True,
         )
     return model
 
