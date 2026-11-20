@@ -216,6 +216,57 @@ All six checkpoints were verified by SHA-256.
 [Per-seed results](results/pems-bay-100/test-by-seed.csv) ·
 [Verified metrics and checkpoint hashes](results/pems-bay-100/summary.json)
 
+### Feed outages and latency
+
+We replayed the 10,412 held-out forecast windows for all six validation-selected
+checkpoints from the 100-epoch runs on one RTX 4090 and reproduced the original
+clean-input MAE for each checkpoint. The inputs use the HTTP service's carry
+policy. It carries the latest valid speed within the one-hour input window and
+uses the training mean for gaps before the first valid reading.
+
+Synthetic faults follow the same timeline for all models and seeds. For each
+six-hour period, we select a random sensor and its 32 nearest neighbors by
+coordinates. The 30- and 120-minute outages share an onset within the period.
+Regional delivery latency applies to the selected group's measurements for the
+full period. At each forecast origin, the replay withholds readings that have
+yet to arrive and retains the original targets. A sensor counts as affected
+when at least one otherwise valid reading is withheld from its input window.
+
+The table reports three-seed mean MAE (mph) across all 12 horizons and, in
+parentheses, the number of paired seeds with lower CST MAE.
+
+| Feed condition | MTGNN + coordinates | CST | Overall MAE reduction | Affected-sensor MAE reduction |
+| --- | ---: | ---: | ---: | ---: |
+| No injected fault | 1.744 | 1.585 | 9.1% (3/3) | — |
+| Regional outage, 30 min | 1.749 | 1.589 | 9.2% (3/3) | 11.4% (3/3) |
+| Regional outage, 120 min | 1.823 | 1.658 | 9.0% (3/3) | 7.2% (3/3) |
+| Regional delay, 15 min | 1.780 | 1.610 | 9.6% (3/3) | 11.7% (3/3) |
+| Network-wide delay, 5 min | 1.904 | 1.681 | 11.7% (3/3) | 11.7% (3/3) |
+| Network-wide delay, 15 min | 2.151 | 1.865 | 13.3% (3/3) | 13.3% (3/3) |
+| Network-wide delay, 30 min | 2.537 | 2.201 | 13.2% (3/3) | 13.2% (3/3) |
+| 120 min regional outage + 15 min network-wide delay | 2.233 | 1.946 | 12.9% (3/3) | 12.9% (3/3) |
+
+With five minutes of network-wide delay, CST achieved 1.681 mph
+MAE. The coordinate-aware MTGNN with no injected fault scored
+1.744 mph. At 15 minutes of delay, CST MAE rose to
+1.865 mph. Among the affected sensors during the two-hour
+regional outage, MAE fell from 3.338 to
+3.099 mph with CST.
+
+To rerun the replay, pass the directories containing each group's
+`results/<variant>-s<seed>/best.pt` and `metrics.json`.
+
+```bash
+python benchmark_pems_feed.py data/PEMS-BAY.csv data/locations-bay.csv \
+  output/pems-bay-100-seeds-17-29 output/pems-bay-100-seed-43 \
+  output/pems-bay-feed.json
+```
+
+[Reduction by scenario](results/pems-bay-feed-robustness/feed-robustness.png) ·
+[Per-seed results](results/pems-bay-feed-robustness/test-by-seed.csv) ·
+[All groups, horizon metrics and provenance](results/pems-bay-feed-robustness/summary.json) ·
+[Replay code](benchmark_pems_feed.py)
+
 ### Serve all 325 PEMS-BAY sensors
 
 Start the local HTTP service with the exported PEMS-BAY checkpoint.
