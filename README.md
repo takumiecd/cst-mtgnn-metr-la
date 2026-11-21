@@ -237,6 +237,10 @@ intervals for the first sensor unless you specify `--sensor`. Use
 your own CSV, supply all 325 sensor-ID columns and five-minute timestamps
 in Pacific local time. The last 12 rows form the input window.
 
+The coordinate-aware MTGNN can select different neighbors on CPU and CUDA
+when graph scores tie at the top-20 cutoff. We report the benchmark MAE
+from the RTX 4090 evaluation.
+
 You can also download a checkpoint and forecast from local files.
 
 ```bash

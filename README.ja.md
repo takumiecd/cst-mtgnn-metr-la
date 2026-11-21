@@ -218,6 +218,9 @@ python infer.py example_input.csv --dataset pems-bay --seed 17 --variant baselin
 手元のCSVを使う場合は、全325センサーIDの列と米国太平洋時間の5分間隔の
 時刻列を用意します。最後の12行が入力窓です。
 
+座標付きMTGNNは、上位20件の境界でグラフのスコアが同点になると、CPUとCUDAで
+選ばれる近傍が変わることがあります。掲載したベンチマークのMAEはRTX 4090での測定値です。
+
 先に重みをダウンロードして、ローカルファイルから予測することもできます。
 
 ```bash
