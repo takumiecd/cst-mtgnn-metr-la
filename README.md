@@ -218,6 +218,35 @@ All six checkpoints were verified by SHA-256.
 [Per-seed results](results/pems-bay-100/test-by-seed.csv) ·
 [Verified metrics and checkpoint hashes](results/pems-bay-100/summary.json)
 
+### Forecast from the PEMS-BAY weights
+
+The [PEMS-BAY checkpoint collection](https://huggingface.co/takumiecd/cst-mtgnn-pems-bay) contains the six
+validation-selected weights from the 100-epoch runs. After installing
+`requirements.txt`, run either model with the bundled synthetic input.
+
+```bash
+curl -fL https://huggingface.co/takumiecd/cst-mtgnn-pems-bay/resolve/main/example_input.csv -o example_input.csv
+python infer.py example_input.csv --dataset pems-bay --seed 17 --variant cst
+python infer.py example_input.csv --dataset pems-bay --seed 17 --variant baseline_coords
+```
+
+Use `--seed 17`, `--seed 29`, or `--seed 43`. The CLI downloads the selected
+Safetensors and configuration, and returns 12 forecasts at five-minute
+intervals for the first sensor unless you specify `--sensor`. Use
+`--device cuda` with a CUDA-enabled PyTorch installation. To forecast with
+your own CSV, supply all 325 sensor-ID columns and five-minute timestamps
+in Pacific local time. The last 12 rows form the input window.
+
+You can also download a checkpoint and forecast from local files.
+
+```bash
+hf download takumiecd/cst-mtgnn-pems-bay config.json example_input.csv \
+  seed-43/cst.safetensors --local-dir ./pems-bay-weights
+python infer.py pems-bay-weights/example_input.csv --variant cst \
+  --config pems-bay-weights/config.json \
+  --weights pems-bay-weights/seed-43/cst.safetensors
+```
+
 ### Feed outages and latency
 
 We replayed the 10,412 held-out forecast windows for all six validation-selected

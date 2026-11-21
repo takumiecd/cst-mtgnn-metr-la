@@ -200,6 +200,34 @@ RTX 4090 1枚で両モデルを一から100エポックずつ、シード17・29
 [シード別結果](results/pems-bay-100/test-by-seed.csv) ·
 [集計とチェックポイントのハッシュ](results/pems-bay-100/summary.json)
 
+### 公開したPEMS-BAYの重みで予測する
+
+[PEMS-BAYの重み](https://huggingface.co/takumiecd/cst-mtgnn-pems-bay)では、100エポック学習した各ランの検証最良
+チェックポイント6件を配布しています。`requirements.txt` のインストール後、
+同梱の合成入力で両モデルを試せます。
+
+```bash
+curl -fL https://huggingface.co/takumiecd/cst-mtgnn-pems-bay/resolve/main/example_input.csv -o example_input.csv
+python infer.py example_input.csv --dataset pems-bay --seed 17 --variant cst
+python infer.py example_input.csv --dataset pems-bay --seed 17 --variant baseline_coords
+```
+
+`--seed 17`、`--seed 29`、`--seed 43` から選べます。CLIが選択したSafetensorsと
+構成を取得し、5分刻みで12時点を予測します。`--sensor` を省略すると
+最初のセンサーを予測します。CUDA対応PyTorchでは `--device cuda` を使えます。
+手元のCSVを使う場合は、全325センサーIDの列と米国太平洋時間の5分間隔の
+時刻列を用意します。最後の12行が入力窓です。
+
+先に重みをダウンロードして、ローカルファイルから予測することもできます。
+
+```bash
+hf download takumiecd/cst-mtgnn-pems-bay config.json example_input.csv \
+  seed-43/cst.safetensors --local-dir ./pems-bay-weights
+python infer.py pems-bay-weights/example_input.csv --variant cst \
+  --config pems-bay-weights/config.json \
+  --weights pems-bay-weights/seed-43/cst.safetensors
+```
+
 ### 欠測と配信遅延への耐性
 
 RTX 4090 1枚で、100エポック学習の検証最良チェックポイント6件を使い、
