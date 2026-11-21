@@ -18,6 +18,8 @@ from data import encode, read_series, sha256_file, split_origins, time_of_day
 from model import HORIZON, build_model, forecast
 
 HUB_REPO = "takumiecd/cst-mtgnn-metr-la"
+PEMS_BAY_HUB_REPO = "takumiecd/cst-mtgnn-pems-bay"
+PEMS_BAY_SEEDS = (17, 29, 43)
 
 
 @torch.inference_mode()
@@ -71,8 +73,22 @@ def main():
     parser.add_argument(
         "--variant", choices=("baseline", "baseline_coords", "cst"), default="cst"
     )
+    parser.add_argument(
+        "--dataset",
+        choices=("metr-la", "pems-bay"),
+        default="metr-la",
+        help="Select a published Hugging Face checkpoint collection",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        choices=PEMS_BAY_SEEDS,
+        help="PEMS-BAY training seed (default: 17)",
+    )
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--sensor", help="METR-LA sensor ID, defaults to the first")
+    parser.add_argument(
+        "--sensor", help="Sensor ID, defaults to the first in the checkpoint"
+    )
     parser.add_argument("--test-index", type=int, help="Zero-based held-out forecast")
     parser.add_argument("--config", type=Path)
     parser.add_argument("--weights", type=Path)
@@ -80,16 +96,29 @@ def main():
     args = parser.parse_args()
     if (args.config is None) != (args.weights is None):
         parser.error("Use --config and --weights together for local files")
-    if args.variant == "baseline_coords" and args.weights is None:
-        parser.error("The coordinate baseline requires local --config and --weights")
+    if args.seed is not None and (args.dataset != "pems-bay" or args.weights):
+        parser.error("--seed selects a PEMS-BAY Hugging Face checkpoint")
+
+    repo_id = HUB_REPO
+    filename = f"{args.variant}.safetensors"
+    if args.weights is None:
+        if args.dataset == "pems-bay":
+            if args.variant == "baseline":
+                parser.error("Use --variant baseline_coords for the PEMS-BAY baseline")
+            repo_id = PEMS_BAY_HUB_REPO
+            filename = f"seed-{args.seed or PEMS_BAY_SEEDS[0]}/{filename}"
+        elif args.variant == "baseline_coords":
+            parser.error(
+                "The METR-LA coordinate baseline requires local --config and --weights"
+            )
 
     path = args.config or hf_hub_download(
-        HUB_REPO, "config.json", revision=args.revision, token=False
+        repo_id, "config.json", revision=args.revision, token=False
     )
     config = json.loads(Path(path).read_text())
     sensor_id = args.sensor or config["sensor_ids"][0]
     if sensor_id not in config["sensor_ids"]:
-        parser.error("Unknown METR-LA sensor ID")
+        parser.error("Unknown sensor ID for this checkpoint")
     sensor_ids, speeds, times = read_series(
         args.input, len(config["sensor_ids"]), config.get("timezone")
     )
@@ -108,9 +137,9 @@ def main():
     factory = partial(build_model, args.variant, config)
     if args.weights is None:
         model = from_pretrained(
-            HUB_REPO,
+            repo_id,
             model_factory=factory,
-            filename=f"{args.variant}.safetensors",
+            filename=filename,
             device=args.device,
             revision=args.revision,
             token=False,
